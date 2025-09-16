@@ -3,7 +3,6 @@
 import { rfidAccessDataReasoning } from '@/ai/flows/rfid-access-data-reasoning';
 import type { CardData } from './types';
 import { supabase } from './supabaseClient';
-import { randomUUID } from 'crypto';
 
 async function getAccessPermissionsTable(): Promise<string> {
   const { data, error } = await supabase.from('cards').select('card_uid,user_name,access_level,authorized_doors');
@@ -73,8 +72,20 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
 
 export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userName'>, role: string) {
     
+    const { count, error: countError } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      console.error('Error counting profiles:', countError);
+      return { success: false, error: countError.message };
+    }
+
+    const nextUserNumber = (count ?? 0) + 1;
+    const email = `teste${nextUserNumber}@email.com`;
+    
     const { data: { user }, error: authError } = await supabase.auth.signUp({
-        email: `${randomUUID()}@example.com`,
+        email: email,
         password: 'password123', // Using a dummy password
     });
 
