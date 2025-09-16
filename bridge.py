@@ -6,7 +6,7 @@ import time
 # Altere para a porta serial correta do seu Arduino
 # No Linux/Mac, pode ser algo como '/dev/ttyACM0' ou '/dev/tty.usbmodem14201'
 # No Windows, pode ser 'COM3', 'COM4', etc.
-ARDUINO_PORT = '/dev/ttyUSB0' 
+ARDUINO_PORT = 'COM3' 
 
 # A URL para a qual os dados do cartão serão enviados na sua aplicação Next.js
 WEBAPP_URL = 'http://localhost:9002/api/scan'
