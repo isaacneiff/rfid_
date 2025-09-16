@@ -3,6 +3,7 @@
 import { rfidAccessDataReasoning } from '@/ai/flows/rfid-access-data-reasoning';
 import type { CardData } from './types';
 import { supabase } from './supabaseClient';
+import { randomUUID } from 'crypto';
 
 async function getAccessPermissionsTable(): Promise<string> {
   const { data, error } = await supabase.from('cards').select('card_uid,user_name,access_level,authorized_doors');
@@ -70,12 +71,26 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
   }
 }
 
-export async function registerCard(cardData: CardData, role: string) {
+export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userName'>, role: string) {
+    
+    const { data: { user }, error: authError } = await supabase.auth.signUp({
+        email: `${randomUUID()}@example.com`,
+        password: 'password123', // Using a dummy password
+    });
+
+    if (authError || !user) {
+        console.error('Error creating user:', authError);
+        return { success: false, error: authError?.message || 'Failed to create a user.' };
+    }
+    
   try {
-    // Step 1: Create a profile for the user
+    // Step 1: Create a profile for the user, linked to the auth user
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .insert({ user_name: cardData.userName })
+      .insert({ 
+          id: user.id, // Link to the created auth user
+          user_name: cardData.userName 
+        })
       .select()
       .single();
 
@@ -84,22 +99,26 @@ export async function registerCard(cardData: CardData, role: string) {
     // Step 2: Register the card and associate it with the profile
     const { error: cardError } = await supabase.from('cards').insert({
       card_uid: cardData.cardUID,
-      block_1_data: cardData.block1Data,
-      block_2_data: cardData.block2Data,
+      block_1_data: 'New User Data', // Mock data as per request
+      block_2_data: `Role: ${role}`,   // Mock data as per request
       access_level: role,
-      user_id: profile.id,
+      user_id: profile.id, // This is now the user's auth ID
       authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'], // Example logic
     });
 
     if (cardError) {
-      // If card registration fails, we should probably roll back the profile creation
-      await supabase.from('profiles').delete().eq('id', profile.id);
+      // If card registration fails, roll back the profile and user creation
+      await supabase.auth.admin.deleteUser(user.id);
       throw cardError;
     }
 
     return { success: true };
   } catch (error: any) {
     console.error('Error registering card:', error);
+    // If something fails after user creation, we must delete the user to avoid orphans
+    if(user) {
+        await supabase.auth.admin.deleteUser(user.id);
+    }
     return { success: false, error: error.message };
   }
 }
