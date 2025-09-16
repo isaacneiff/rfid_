@@ -1,7 +1,7 @@
 'use client';
 
 import { AccessLogTable } from '@/components/dashboard/AccessLogTable';
-import { ScanSimulator } from '@/components/dashboard/ScanSimulator';
+import { RealtimeScanner } from '@/components/dashboard/RealtimeScanner';
 import { useAccessLog } from '@/hooks/use-access-log';
 
 export default function DashboardPage() {
@@ -14,7 +14,7 @@ export default function DashboardPage() {
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <ScanSimulator onScanResult={addLogEntry} />
+          <RealtimeScanner onScanResult={addLogEntry} />
         </div>
         <div className="lg:col-span-2">
           <AccessLogTable logEntries={accessLog} />
