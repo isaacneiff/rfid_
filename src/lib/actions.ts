@@ -62,21 +62,24 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
                 userName: 'Unknown',
                 cardUID: cardData.cardUID,
             };
-        } else {
-            // Supabase returns an array for relationships, even for a single one.
-            const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
-            const userName = profile?.user_name || 'Unknown';
-            
-            const accessPermissionsTable = await getAccessPermissionsTable();
-            const aiResult = await rfidAccessDataReasoning({
-                cardUID: cardData.cardUID,
-                block1Data: cardData.block1Data,
-                block2Data: cardData.block2Data,
-                accessPermissionsTable: accessPermissionsTable,
-            });
-            result = { ...aiResult, userName, cardUID: cardData.cardUID };
-        }
-
+            // Log the attempt and return immediately
+            await logAccessAttempt(result);
+            return result;
+        } 
+        
+        // If card is found, proceed with AI reasoning
+        const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+        const userName = profile?.user_name || 'Unknown';
+        
+        const accessPermissionsTable = await getAccessPermissionsTable();
+        const aiResult = await rfidAccessDataReasoning({
+            cardUID: cardData.cardUID,
+            block1Data: cardData.block1Data,
+            block2Data: cardData.block2Data,
+            accessPermissionsTable: accessPermissionsTable,
+        });
+        result = { ...aiResult, userName, cardUID: cardData.cardUID };
+        
         await logAccessAttempt(result);
         return result;
 
@@ -88,12 +91,13 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
             userName: 'Unknown',
             cardUID: cardData.cardUID,
         };
+        // Log the attempt even if there's a system error
         await logAccessAttempt(result);
         return result;
     }
 }
 
-export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userName'>, role: string) {
+export async function registerCard(cardData: Pick<CardData, 'userName'>, cardUID: string, role: string) {
     
     const { count, error: countError } = await supabase
       .from('profiles')
@@ -134,7 +138,7 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
 
     // Step 2: Register the card and associate it with the profile
     const { error: cardError } = await supabase.from('cards').insert({
-      card_uid: cardData.cardUID,
+      card_uid: cardUID,
       block_1_data: 'New User Data',
       block_2_data: `Role: ${role}`,
       access_level: role,
