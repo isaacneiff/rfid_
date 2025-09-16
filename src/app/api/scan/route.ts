@@ -11,16 +11,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Card UID is required' }, { status: 400 });
     }
 
-    // Simula os dados dos blocos, já que o Arduino não os envia
-    // O importante aqui é o cardUID
-    const cardData = {
-        cardUID: cardUID,
-        block1Data: "data from real scanner",
-        block2Data: "data from real scanner",
-    };
-
-    // Usa a mesma 'action' que a interface web usa para manter a consistência
-    const result = await checkAccess(cardData);
+    // A action 'checkAccess' agora só precisa do cardUID
+    const result = await checkAccess({ cardUID });
 
     // Retorna o resultado da verificação de acesso para o script intermediário
     return NextResponse.json(result, { status: 200 });

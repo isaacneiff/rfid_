@@ -35,8 +35,8 @@ export function RegistrationForm() {
     setIsSubmitting(true);
     const result = await registerCard(
       {
-        cardUID: values.cardUID,
         userName: values.userName,
+        cardUID: values.cardUID,
       },
       values.userRole
     );

@@ -43,8 +43,6 @@ export function RealtimeScanner() {
 
     const cardToScan = {
         cardUID,
-        block1Data: "data from real scanner",
-        block2Data: "data from real scanner",
     };
 
     try {

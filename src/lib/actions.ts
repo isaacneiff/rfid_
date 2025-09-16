@@ -1,28 +1,8 @@
 'use server';
 
-import { rfidAccessDataReasoning } from '@/ai/flows/rfid-access-data-reasoning';
 import type { CardData } from './types';
 import { supabase } from './supabaseClient';
 import { revalidatePath } from 'next/cache';
-
-async function getAccessPermissionsTable(): Promise<string> {
-  const { data, error } = await supabase.from('cards').select('card_uid,user_name,access_level,authorized_doors');
-  
-  if (error) {
-    console.error('Error fetching cards from Supabase:', error);
-    return '';
-  }
-
-  if (!data || data.length === 0) {
-    return 'CardUID,UserName,AccessLevel,AuthorizedDoors';
-  }
-
-  // Convert to CSV format for the AI prompt
-  const header = 'CardUID,UserName,AccessLevel,AuthorizedDoors';
-  const rows = data.map(card => `${card.card_uid},${card.user_name},${card.access_level},"${Array.isArray(card.authorized_doors) ? card.authorized_doors.join(',') : ''}"`);
-
-  return [header, ...rows].join('\n');
-}
 
 async function logAccessAttempt(result: { cardUID: string; userName: string; isAuthorized: boolean; reason: string; }) {
     const { error } = await supabase.from('access_logs').insert({
@@ -40,13 +20,13 @@ async function logAccessAttempt(result: { cardUID: string; userName: string; isA
     }
 }
 
-export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Data' | 'block2Data'>) {
+export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
     let result;
     try {
         const { data: card, error: fetchError } = await supabase
             .from('cards')
             .select(`
-                *,
+                card_uid,
                 profiles (
                     user_name
                 )
@@ -55,36 +35,28 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
             .single();
 
         if (fetchError || !card) {
-            console.log(`Card ${cardData.cardUID} not found in database. Error:`, fetchError?.message);
-            result = {
+             result = {
                 isAuthorized: false,
                 reason: 'Card not registered.',
                 userName: 'Unknown',
                 cardUID: cardData.cardUID,
             };
-            // Log the attempt and return immediately
-            await logAccessAttempt(result);
-            return result;
-        } 
-        
-        // If card is found, proceed with AI reasoning
-        const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
-        const userName = profile?.user_name || 'Unknown';
-        
-        const accessPermissionsTable = await getAccessPermissionsTable();
-        const aiResult = await rfidAccessDataReasoning({
-            cardUID: cardData.cardUID,
-            block1Data: cardData.block1Data,
-            block2Data: cardData.block2Data,
-            accessPermissionsTable: accessPermissionsTable,
-        });
-        result = { ...aiResult, userName, cardUID: cardData.cardUID };
+        } else {
+            const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+            const userName = profile?.user_name || 'Unknown User';
+            result = {
+                isAuthorized: true,
+                reason: `Access granted for ${userName}.`,
+                userName: userName,
+                cardUID: cardData.cardUID,
+            };
+        }
         
         await logAccessAttempt(result);
         return result;
 
     } catch (error) {
-        console.error('Error in AI reasoning or logging:', error);
+        console.error('Error in checkAccess:', error);
         result = {
             isAuthorized: false,
             reason: 'System error during authorization check.',
@@ -97,7 +69,7 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
     }
 }
 
-export async function registerCard(cardData: Pick<CardData, 'userName'>, cardUID: string, role: string) {
+export async function registerCard(cardData: {userName: string, cardUID: string}, role: string) {
     
     const { count, error: countError } = await supabase
       .from('profiles')
@@ -138,7 +110,7 @@ export async function registerCard(cardData: Pick<CardData, 'userName'>, cardUID
 
     // Step 2: Register the card and associate it with the profile
     const { error: cardError } = await supabase.from('cards').insert({
-      card_uid: cardUID,
+      card_uid: cardData.cardUID,
       block_1_data: 'New User Data',
       block_2_data: `Role: ${role}`,
       access_level: role,
@@ -152,6 +124,7 @@ export async function registerCard(cardData: Pick<CardData, 'userName'>, cardUID
       throw cardError;
     }
 
+    revalidatePath('/');
     return { success: true };
   } catch (error: any) {
     console.error('Error registering card:', error);
