@@ -19,8 +19,8 @@ import { Header } from './Header';
 import { LayoutDashboard, UserPlus, Fingerprint } from 'lucide-react';
 
 const menuItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/register', label: 'Register Card', icon: UserPlus },
+  { path: '/', label: 'Painel', icon: LayoutDashboard },
+  { path: '/register', label: 'Registrar Cartão', icon: UserPlus },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -59,7 +59,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          {/* Footer content if any */}
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>

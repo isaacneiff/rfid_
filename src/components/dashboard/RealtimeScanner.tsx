@@ -33,8 +33,8 @@ export function RealtimeScanner() {
     if (!cardUID) {
         toast({
             variant: 'destructive',
-            title: 'Error',
-            description: 'Please enter a Card UID.',
+            title: 'Erro',
+            description: 'Por favor, insira o UID do cartão.',
         });
         return;
     }
@@ -52,10 +52,10 @@ export function RealtimeScanner() {
       console.error('Scan failed:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to process scan. Please try again.',
+        title: 'Erro',
+        description: 'Falha ao processar o escaneamento. Tente novamente.',
       });
-      setResult({ isAuthorized: false, reason: 'Failed to process scan.' });
+      setResult({ isAuthorized: false, reason: 'Falha ao processar o escaneamento.' });
     } finally {
       setIsLoading(false);
     }
@@ -64,19 +64,19 @@ export function RealtimeScanner() {
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle>Realtime RFID Scanner</CardTitle>
-        <CardDescription>Enter a Card UID to simulate a hardware scan.</CardDescription>
+        <CardTitle>Scanner RFID em Tempo Real</CardTitle>
+        <CardDescription>Insira um UID de cartão para simular uma leitura de hardware.</CardDescription>
       </CardHeader>
       <form onSubmit={handleScan}>
         <CardContent className="flex flex-col items-center justify-center space-y-6 p-10">
           {result === null && !isLoading && (
             <div className="w-full space-y-2">
-                <Label htmlFor='card-uid-input'>Card UID</Label>
+                <Label htmlFor='card-uid-input'>UID do Cartão</Label>
                 <Input 
                     id="card-uid-input"
                     value={cardUID}
                     onChange={e => setCardUID(e.target.value.toUpperCase())}
-                    placeholder="e.g., 39C3BB99"
+                    placeholder="ex: 39C3BB99"
                     className="font-code text-center"
                     disabled={isLoading}
                 />
@@ -85,7 +85,7 @@ export function RealtimeScanner() {
           {isLoading && (
             <div className="flex flex-col items-center gap-2 text-primary">
               <Loader2 className="h-16 w-16 animate-spin" />
-              <span>Checking access...</span>
+              <span>Verificando acesso...</span>
             </div>
           )}
           {result !== null && (
@@ -100,10 +100,10 @@ export function RealtimeScanner() {
               ) : (
                 <XCircle className="h-16 w-16" />
               )}
-              <p className="text-xl font-bold">{result.isAuthorized ? 'Access Granted' : 'Access Denied'}</p>
+              <p className="text-xl font-bold">{result.isAuthorized ? 'Acesso Concedido' : 'Acesso Negado'}</p>
               <p className="text-sm text-muted-foreground">{result.reason}</p>
               <Button variant="outline" onClick={() => { setResult(null); setCardUID(''); }} className="mt-4">
-                Scan another card
+                Escanear outro cartão
               </Button>
             </div>
           )}
@@ -111,7 +111,7 @@ export function RealtimeScanner() {
         <CardFooter>
           <Button type="submit" disabled={isLoading || result !== null} className="w-full bg-primary hover:bg-primary/90">
             <ScanLine className="mr-2 h-4 w-4" />
-            {isLoading ? 'Checking...' : 'Check Card Access'}
+            {isLoading ? 'Verificando...' : 'Verificar Acesso do Cartão'}
           </Button>
         </CardFooter>
       </form>

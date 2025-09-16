@@ -15,7 +15,6 @@ async function logAccessAttempt(result: { cardUID: string; userName: string; isA
     if (error) {
         console.error('Error logging access attempt:', error);
     } else {
-        // Revalidate the path to show the new log entry in the table
         revalidatePath('/');
     }
 }
@@ -37,16 +36,16 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
         if (fetchError || !card) {
              result = {
                 isAuthorized: false,
-                reason: 'Card not registered.',
-                userName: 'Unknown',
+                reason: 'Cartão não registrado.',
+                userName: 'Desconhecido',
                 cardUID: cardData.cardUID,
             };
         } else {
             const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
-            const userName = profile?.user_name || 'Unknown User';
+            const userName = profile?.user_name || 'Usuário Desconhecido';
             result = {
                 isAuthorized: true,
-                reason: `Access granted for ${userName}.`,
+                reason: `Acesso concedido para ${userName}.`,
                 userName: userName,
                 cardUID: cardData.cardUID,
             };
@@ -59,11 +58,10 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
         console.error('Error in checkAccess:', error);
         result = {
             isAuthorized: false,
-            reason: 'System error during authorization check.',
-            userName: 'Unknown',
+            reason: 'Erro de sistema durante a verificação de autorização.',
+            userName: 'Desconhecido',
             cardUID: cardData.cardUID,
         };
-        // Log the attempt even if there's a system error
         await logAccessAttempt(result);
         return result;
     }
@@ -85,22 +83,21 @@ export async function registerCard(cardData: {userName: string, cardUID: string}
     
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
-        password: 'password123', // Using a dummy password
+        password: 'password123',
     });
 
     if (authError || !authData.user) {
         console.error('Error creating user:', authError);
-        return { success: false, error: authError?.message || 'Failed to create a user. Sign-ups might be disabled or the email is invalid.' };
+        return { success: false, error: authError?.message || 'Falha ao criar um usuário. Os cadastros podem estar desativados ou o e-mail é inválido.' };
     }
     
     const { user } = authData;
 
   try {
-    // Step 1: Create a profile for the user, linked to the auth user
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .insert({ 
-          id: user.id, // Link to the created auth user
+          id: user.id,
           user_name: cardData.userName 
         })
       .select()
@@ -108,18 +105,16 @@ export async function registerCard(cardData: {userName: string, cardUID: string}
 
     if (profileError) throw profileError;
 
-    // Step 2: Register the card and associate it with the profile
     const { error: cardError } = await supabase.from('cards').insert({
       card_uid: cardData.cardUID,
       block_1_data: 'New User Data',
       block_2_data: `Role: ${role}`,
       access_level: role,
       user_id: profile.id, 
-      authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'], // Example logic
+      authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'],
     });
 
     if (cardError) {
-      // If card registration fails, roll back the profile and user creation
       await supabase.auth.admin.deleteUser(user.id);
       throw cardError;
     }
@@ -128,7 +123,6 @@ export async function registerCard(cardData: {userName: string, cardUID: string}
     return { success: true };
   } catch (error: any) {
     console.error('Error registering card:', error);
-    // If something fails after user creation, we must delete the user to avoid orphans
     if(user) {
         try { await supabase.auth.admin.deleteUser(user.id); } catch (e) {}
     }

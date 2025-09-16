@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex items-center">
-        <h1 className="font-semibold text-lg md:text-2xl">Access Control Dashboard</h1>
+        <h1 className="font-semibold text-lg md:text-2xl">Painel de Controle de Acesso</h1>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">

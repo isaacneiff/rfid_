@@ -14,9 +14,9 @@ import { UserPlus, Loader2 } from 'lucide-react';
 import { registerCard } from '@/lib/actions';
 
 const formSchema = z.object({
-  userName: z.string().min(2, 'User name must be at least 2 characters.'),
-  userRole: z.enum(['Admin', 'User', 'Guest'], { required_error: 'Please select a role.' }),
-  cardUID: z.string().min(4, 'Card UID is required.'),
+  userName: z.string().min(2, 'O nome de usuário deve ter pelo menos 2 caracteres.'),
+  userRole: z.enum(['Admin', 'User', 'Guest'], { required_error: 'Por favor, selecione um papel.' }),
+  cardUID: z.string().min(4, 'O UID do cartão é obrigatório.'),
 });
 
 export function RegistrationForm() {
@@ -43,14 +43,14 @@ export function RegistrationForm() {
 
     if (result.success) {
       toast({
-        title: 'Registration Successful',
-        description: `${values.userName} has been registered with card ${values.cardUID}.`,
+        title: 'Registro bem-sucedido',
+        description: `${values.userName} foi registrado com o cartão ${values.cardUID}.`,
       });
       form.reset();
     } else {
       toast({
         variant: 'destructive',
-        title: 'Registration Failed',
+        title: 'Falha no Registro',
         description: result.error,
       });
     }
@@ -60,8 +60,8 @@ export function RegistrationForm() {
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle>New Card Registration</CardTitle>
-        <CardDescription>Fill in the user details and the RFID card UID to register it.</CardDescription>
+        <CardTitle>Registro de Novo Cartão</CardTitle>
+        <CardDescription>Preencha os detalhes do usuário e o UID do cartão RFID para registrá-lo.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -71,9 +71,9 @@ export function RegistrationForm() {
               name="userName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User Name</FormLabel>
+                  <FormLabel>Nome do Usuário</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., John Doe" {...field} />
+                    <Input placeholder="ex: João da Silva" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -84,17 +84,17 @@ export function RegistrationForm() {
               name="userRole"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User Role</FormLabel>
+                  <FormLabel>Função do Usuário</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder="Selecione uma função" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="User">User</SelectItem>
-                      <SelectItem value="Guest">Guest</SelectItem>
+                      <SelectItem value="Admin">Administrador</SelectItem>
+                      <SelectItem value="User">Usuário</SelectItem>
+                      <SelectItem value="Guest">Convidado</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -106,17 +106,17 @@ export function RegistrationForm() {
               name="cardUID"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Card UID</FormLabel>
+                  <FormLabel>UID do Cartão</FormLabel>
                   <FormControl>
                     <Input 
-                        placeholder="e.g., 39C3BB99" 
+                        placeholder="ex: 39C3BB99" 
                         {...field} 
                         onChange={e => field.onChange(e.target.value.toUpperCase())}
                         className="font-code"
                     />
                   </FormControl>
                   <FormDescription>
-                    Enter the UID from the hardware scanner.
+                    Insira o UID lido pelo scanner de hardware.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -126,7 +126,7 @@ export function RegistrationForm() {
           <CardFooter>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-              Register User
+              Registrar Usuário
             </Button>
           </CardFooter>
         </form>

@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import type { AccessLogEntry } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 
-// This is now a type from the database row, not a custom type
 type LogEntry = {
     id: number;
     timestamp: string;
@@ -25,23 +24,26 @@ type LogEntry = {
 
 export function AccessLogTable({ logEntries }: { logEntries: LogEntry[] }) {
   const formatTimestamp = (isoString: string) => {
-    return new Date(isoString).toLocaleString();
+    return new Date(isoString).toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'medium',
+    });
   };
 
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
-        <CardTitle>Live Access Log</CardTitle>
-        <CardDescription>Real-time feed of entry and exit events from the database.</CardDescription>
+        <CardTitle>Log de Acesso em Tempo Real</CardTitle>
+        <CardDescription>Feed em tempo real de eventos de entrada e saída do banco de dados.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[380px]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead className="hidden sm:table-cell">Card UID</TableHead>
-                <TableHead className="hidden md:table-cell">Timestamp</TableHead>
+                <TableHead>Usuário</TableHead>
+                <TableHead className="hidden sm:table-cell">UID do Cartão</TableHead>
+                <TableHead className="hidden md:table-cell">Data e Hora</TableHead>
                 <TableHead className="text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -59,7 +61,7 @@ export function AccessLogTable({ logEntries }: { logEntries: LogEntry[] }) {
                     <TableCell className="hidden md:table-cell">{formatTimestamp(log.timestamp)}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={log.status === 'Granted' ? 'default' : 'destructive'} className={log.status === 'Granted' ? 'bg-green-600' : ''}>
-                        {log.status}
+                        {log.status === 'Granted' ? 'Concedido' : 'Negado'}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -67,7 +69,7 @@ export function AccessLogTable({ logEntries }: { logEntries: LogEntry[] }) {
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center">
-                    No access events recorded yet.
+                    Nenhum evento de acesso registrado ainda.
                   </TableCell>
                 </TableRow>
               )}
