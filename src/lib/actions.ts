@@ -21,6 +21,8 @@ async function logAccessAttempt(result: { cardUID: string; userName: string; isA
 
 export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
     let result;
+    const trimmedUID = cardData.cardUID.trim(); // Garante a remoção de espaços ou quebras de linha
+
     try {
         const { data: card, error: fetchError } = await supabase
             .from('cards')
@@ -30,7 +32,7 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
                     user_name
                 )
             `)
-            .eq('card_uid', cardData.cardUID)
+            .eq('card_uid', trimmedUID)
             .single();
 
         if (fetchError || !card) {
@@ -38,16 +40,17 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
                 isAuthorized: false,
                 reason: 'Cartão não registrado.',
                 userName: 'Desconhecido',
-                cardUID: cardData.cardUID,
+                cardUID: trimmedUID,
             };
         } else {
-            const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+            // A consulta com 'profiles ( user_name )' retorna o perfil como um objeto (ou null)
+            const profile = card.profiles as { user_name: string } | null;
             const userName = profile?.user_name || 'Usuário Desconhecido';
             result = {
                 isAuthorized: true,
                 reason: `Acesso concedido para ${userName}.`,
                 userName: userName,
-                cardUID: cardData.cardUID,
+                cardUID: trimmedUID,
             };
         }
         
@@ -60,7 +63,7 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID'>) {
             isAuthorized: false,
             reason: 'Erro de sistema durante a verificação de autorização.',
             userName: 'Desconhecido',
-            cardUID: cardData.cardUID,
+            cardUID: trimmedUID,
         };
         await logAccessAttempt(result);
         return result;
@@ -100,21 +103,22 @@ export async function registerCard(cardData: {userName: string, cardUID: string}
           id: user.id,
           user_name: cardData.userName 
         })
-      .select()
+      .select('id') // Seleciona apenas o 'id' para confirmar a inserção
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError || !profile) throw profileError || new Error("Falha ao criar perfil.");
 
     const { error: cardError } = await supabase.from('cards').insert({
-      card_uid: cardData.cardUID,
+      card_uid: cardData.cardUID.trim(),
       block_1_data: 'New User Data',
       block_2_data: `Role: ${role}`,
       access_level: role,
-      user_id: profile.id, 
+      user_id: user.id, // Usa o ID do usuário de auth
       authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'],
     });
 
     if (cardError) {
+      // Tenta reverter a criação do usuário se a criação do cartão falhar
       await supabase.auth.admin.deleteUser(user.id);
       throw cardError;
     }
@@ -124,7 +128,10 @@ export async function registerCard(cardData: {userName: string, cardUID: string}
   } catch (error: any) {
     console.error('Error registering card:', error);
     if(user) {
-        try { await supabase.auth.admin.deleteUser(user.id); } catch (e) {}
+        // Tenta reverter a criação do usuário em qualquer erro
+        try { await supabase.auth.admin.deleteUser(user.id); } catch (e) {
+          console.error("Falha ao deletar usuário durante o cleanup", e);
+        }
     }
     return { success: false, error: error.message };
   }
