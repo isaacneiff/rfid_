@@ -116,7 +116,7 @@ export function RegistrationForm() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Insira o UID lido pelo scanner de hardware.
+                    Insira o UID lido pelo Arduino.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
