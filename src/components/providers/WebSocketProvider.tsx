@@ -26,14 +26,19 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   const connectWebSocket = useCallback(() => {
+    console.log("Tentando conectar WebSocket...");
     const ws = new WebSocket(WEBSOCKET_URL);
 
     ws.onopen = () => {
       console.log('WebSocket conectado com sucesso.');
-      setIsConnected(true);
-      toast({
-        title: 'Hardware Conectado',
-        description: 'Leitor RFID pronto para uso.',
+      setIsConnected((prev) => {
+        if (!prev) { // Apenas mostra o toast se a conexão estava inativa
+          toast({
+            title: 'Hardware Conectado',
+            description: 'Leitor RFID pronto para uso.',
+          });
+        }
+        return true;
       });
     };
 
@@ -61,7 +66,8 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
       ws.onclose = null; // Evita a tentativa de reconexão ao desmontar
       ws.close();
     };
-  }, [toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Removido `toast` das dependências
 
   useEffect(() => {
     // Inicia a conexão WebSocket

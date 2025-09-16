@@ -1,5 +1,5 @@
 import { AccessLogTable } from '@/components/dashboard/AccessLogTable';
-import { RealtimeScanner } from '@/components/dashboard/RealtimeScanner';
+import RealtimeScanner from '@/components/dashboard/RealtimeScanner';
 import { getAccessLog } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
