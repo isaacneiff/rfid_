@@ -82,18 +82,20 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
     }
 
     const nextUserNumber = (count ?? 0) + 1;
-    const email = `teste${nextUserNumber}@email.com`;
+    const email = `user${nextUserNumber}@example.com`;
     
-    const { data: { user }, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: 'password123', // Using a dummy password
     });
 
-    if (authError || !user) {
+    if (authError || !authData.user) {
         console.error('Error creating user:', authError);
-        return { success: false, error: authError?.message || 'Failed to create a user.' };
+        return { success: false, error: authError?.message || 'Failed to create a user. Sign-ups might be disabled or the email is invalid.' };
     }
     
+    const { user } = authData;
+
   try {
     // Step 1: Create a profile for the user, linked to the auth user
     const { data: profile, error: profileError } = await supabase
@@ -113,7 +115,7 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
       block_1_data: 'New User Data', // Mock data as per request
       block_2_data: `Role: ${role}`,   // Mock data as per request
       access_level: role,
-      user_id: profile.id, // This is now the user's auth ID
+      user_id: profile.id, 
       authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'], // Example logic
     });
 
@@ -128,7 +130,8 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
     console.error('Error registering card:', error);
     // If something fails after user creation, we must delete the user to avoid orphans
     if(user) {
-        await supabase.auth.admin.deleteUser(user.id);
+        // This might fail if the user was already deleted, but it's a good cleanup attempt
+        try { await supabase.auth.admin.deleteUser(user.id); } catch (e) {}
     }
     return { success: false, error: error.message };
   }
