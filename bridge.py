@@ -14,6 +14,12 @@ WEBAPP_URL = 'http://localhost:9002/api/scan'
 BAUD_RATE = 115200
 # --------------------
 
+def is_potential_uid(text: str) -> bool:
+    """Verifica se a string se parece com um UID (sem espaços e com um comprimento razoável)."""
+    # UIDs geralmente não contêm espaços e têm um comprimento específico.
+    # Esta é uma verificação simples; pode ser ajustada se os UIDs tiverem um formato diferente.
+    return " " not in text and 4 <= len(text) <= 30
+
 def main():
     """Função principal para rodar o script da ponte."""
     ser = None
@@ -30,8 +36,8 @@ def main():
             if ser.in_waiting > 0:
                 line = ser.readline().decode('utf-8', errors='ignore').strip()
 
-                # Se a linha não estiver vazia, é um UID
-                if line:
+                # Se a linha não estiver vazia e parecer um UID, processe-a
+                if line and is_potential_uid(line):
                     print(f"UID recebido do Arduino: {line}")
                     
                     try:
@@ -48,7 +54,10 @@ def main():
 
                     except requests.exceptions.RequestException as e:
                         print(f"  -> ERRO ao enviar para a aplicação: {e}")
-            
+                elif line:
+                    # Ignora linhas que não parecem ser UIDs (provavelmente logs)
+                    print(f"  (Ignorando linha de log do Arduino: '{line}')")
+
             time.sleep(0.1) # Pequena pausa para não sobrecarregar a CPU
 
     except serial.SerialException as e:
