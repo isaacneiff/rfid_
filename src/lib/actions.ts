@@ -45,12 +45,17 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
     try {
         const { data: card, error: fetchError } = await supabase
             .from('cards')
-            .select('*, profiles(user_name)')
+            .select(`
+                *,
+                profiles (
+                    user_name
+                )
+            `)
             .eq('card_uid', cardData.cardUID)
             .single();
 
         if (fetchError || !card) {
-            console.log(`Card ${cardData.cardUID} not found in database.`);
+            console.log(`Card ${cardData.cardUID} not found in database. Error:`, fetchError?.message);
             result = {
                 isAuthorized: false,
                 reason: 'Card not registered.',
@@ -58,7 +63,10 @@ export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Da
                 cardUID: cardData.cardUID,
             };
         } else {
-            const userName = (card.profiles as { user_name: string })?.user_name || 'Unknown';
+            // Supabase returns an array for relationships, even for a single one.
+            const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+            const userName = profile?.user_name || 'Unknown';
+            
             const accessPermissionsTable = await getAccessPermissionsTable();
             const aiResult = await rfidAccessDataReasoning({
                 cardUID: cardData.cardUID,
@@ -97,7 +105,7 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
     }
 
     const nextUserNumber = (count ?? 0) + 1;
-    const email = `user${nextUserNumber}@example.com`;
+    const email = `teste${nextUserNumber}@email.com`;
     
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
