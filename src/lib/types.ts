@@ -1,9 +1,9 @@
 export type AccessStatus = 'Granted' | 'Denied';
 
 export type AccessLogEntry = {
-  id: string;
-  userName: string;
-  cardUID: string;
+  id: number;
+  user_name: string;
+  card_uid: string;
   timestamp: string;
   status: AccessStatus;
   reason: string;
@@ -19,6 +19,25 @@ export type CardData = {
 export type Database = {
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          id: number
+          timestamp: string
+          card_uid: string
+          user_name: string
+          status: string
+          reason: string
+        }
+        Insert: {
+          id?: number
+          timestamp?: string
+          card_uid: string
+          user_name: string
+          status: string
+          reason: string
+        }
+        Update: {}
+      }
       cards: {
         Row: {
           id: number
@@ -28,7 +47,7 @@ export type Database = {
           block_2_data: string | null
           user_id: string | null
           access_level: string | null
-          authorized_doors: string[]
+          authorized_doors: string[] | null
         }
         Insert: {
           id?: number
@@ -38,7 +57,7 @@ export type Database = {
           block_2_data?: string | null
           user_id?: string | null
           access_level?: string | null
-          authorized_doors?: string[]
+          authorized_doors?: string[] | null
         }
         Update: {
           id?: number
@@ -48,7 +67,7 @@ export type Database = {
           block_2_data?: string | null
           user_id?: string | null
           access_level?: string | null
-          authorized_doors?: string[]
+          authorized_doors?: string[] | null
         }
       }
       profiles: {
@@ -58,7 +77,7 @@ export type Database = {
           user_name: string
         }
         Insert: {
-          id?: string
+          id: string
           created_at?: string
           user_name: string
         }

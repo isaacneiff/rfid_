@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScanLine, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { checkAccess } from '@/lib/actions';
-import type { AccessLogEntry } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +22,7 @@ type ScanResult = {
   reason: string;
 };
 
-export function RealtimeScanner({ onScanResult }: { onScanResult: (entry: Omit<AccessLogEntry, 'id' | 'timestamp'>) => void }) {
+export function RealtimeScanner() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [cardUID, setCardUID] = useState('');
@@ -51,12 +50,6 @@ export function RealtimeScanner({ onScanResult }: { onScanResult: (entry: Omit<A
     try {
       const authResult = await checkAccess(cardToScan);
       setResult(authResult);
-      onScanResult({
-        userName: authResult.userName,
-        cardUID: cardToScan.cardUID,
-        status: authResult.isAuthorized ? 'Granted' : 'Denied',
-        reason: authResult.reason,
-      });
     } catch (error) {
       console.error('Scan failed:', error);
       toast({
@@ -64,6 +57,7 @@ export function RealtimeScanner({ onScanResult }: { onScanResult: (entry: Omit<A
         title: 'Error',
         description: 'Failed to process scan. Please try again.',
       });
+      setResult({ isAuthorized: false, reason: 'Failed to process scan.' });
     } finally {
       setIsLoading(false);
     }

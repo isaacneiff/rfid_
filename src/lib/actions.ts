@@ -3,6 +3,7 @@
 import { rfidAccessDataReasoning } from '@/ai/flows/rfid-access-data-reasoning';
 import type { CardData } from './types';
 import { supabase } from './supabaseClient';
+import { revalidatePath } from 'next/cache';
 
 async function getAccessPermissionsTable(): Promise<string> {
   const { data, error } = await supabase.from('cards').select('card_uid,user_name,access_level,authorized_doors');
@@ -18,56 +19,70 @@ async function getAccessPermissionsTable(): Promise<string> {
 
   // Convert to CSV format for the AI prompt
   const header = 'CardUID,UserName,AccessLevel,AuthorizedDoors';
-  const rows = data.map(card => `${card.card_uid},${card.user_name},${card.access_level},"${card.authorized_doors.join(',')}"`);
+  const rows = data.map(card => `${card.card_uid},${card.user_name},${card.access_level},"${Array.isArray(card.authorized_doors) ? card.authorized_doors.join(',') : ''}"`);
 
   return [header, ...rows].join('\n');
 }
 
+async function logAccessAttempt(result: { cardUID: string; userName: string; isAuthorized: boolean; reason: string; }) {
+    const { error } = await supabase.from('access_logs').insert({
+        card_uid: result.cardUID,
+        user_name: result.userName,
+        status: result.isAuthorized ? 'Granted' : 'Denied',
+        reason: result.reason,
+    });
+
+    if (error) {
+        console.error('Error logging access attempt:', error);
+    } else {
+        // Revalidate the path to show the new log entry in the table
+        revalidatePath('/');
+    }
+}
 
 export async function checkAccess(cardData: Pick<CardData, 'cardUID' | 'block1Data' | 'block2Data'>) {
-  try {
-    const { data: card, error: fetchError } = await supabase
-      .from('cards')
-      .select('*, profiles(user_name)')
-      .eq('card_uid', cardData.cardUID)
-      .single();
+    let result;
+    try {
+        const { data: card, error: fetchError } = await supabase
+            .from('cards')
+            .select('*, profiles(user_name)')
+            .eq('card_uid', cardData.cardUID)
+            .single();
 
-    if (fetchError || !card) {
-      console.log(`Card ${cardData.cardUID} not found in database.`);
-      return { 
-        isAuthorized: false, 
-        reason: 'Card not registered.',
-        userName: 'Unknown',
-        cardUID: cardData.cardUID,
-      };
+        if (fetchError || !card) {
+            console.log(`Card ${cardData.cardUID} not found in database.`);
+            result = {
+                isAuthorized: false,
+                reason: 'Card not registered.',
+                userName: 'Unknown',
+                cardUID: cardData.cardUID,
+            };
+        } else {
+            const userName = (card.profiles as { user_name: string })?.user_name || 'Unknown';
+            const accessPermissionsTable = await getAccessPermissionsTable();
+            const aiResult = await rfidAccessDataReasoning({
+                cardUID: cardData.cardUID,
+                block1Data: cardData.block1Data,
+                block2Data: cardData.block2Data,
+                accessPermissionsTable: accessPermissionsTable,
+            });
+            result = { ...aiResult, userName, cardUID: cardData.cardUID };
+        }
+
+        await logAccessAttempt(result);
+        return result;
+
+    } catch (error) {
+        console.error('Error in AI reasoning or logging:', error);
+        result = {
+            isAuthorized: false,
+            reason: 'System error during authorization check.',
+            userName: 'Unknown',
+            cardUID: cardData.cardUID,
+        };
+        await logAccessAttempt(result);
+        return result;
     }
-    
-    // The user name is nested in the profiles table
-    const userName = (card.profiles as { user_name: string })?.user_name || 'Unknown';
-    const fullCardData: CardData = {
-        ...cardData,
-        userName,
-    }
-
-    const accessPermissionsTable = await getAccessPermissionsTable();
-    const result = await rfidAccessDataReasoning({
-      cardUID: fullCardData.cardUID,
-      block1Data: fullCardData.block1Data,
-      block2Data: fullCardData.block2Data,
-      accessPermissionsTable: accessPermissionsTable,
-    });
-    
-    return { ...result, userName, cardUID: fullCardData.cardUID };
-
-  } catch (error) {
-    console.error('Error in AI reasoning:', error);
-    return {
-      isAuthorized: false,
-      reason: 'System error during authorization check.',
-      userName: 'Unknown',
-      cardUID: cardData.cardUID,
-    };
-  }
 }
 
 export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userName'>, role: string) {
@@ -112,8 +127,8 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
     // Step 2: Register the card and associate it with the profile
     const { error: cardError } = await supabase.from('cards').insert({
       card_uid: cardData.cardUID,
-      block_1_data: 'New User Data', // Mock data as per request
-      block_2_data: `Role: ${role}`,   // Mock data as per request
+      block_1_data: 'New User Data',
+      block_2_data: `Role: ${role}`,
       access_level: role,
       user_id: profile.id, 
       authorized_doors: role === 'Admin' ? ['All'] : ['Main-Entrance'], // Example logic
@@ -130,9 +145,23 @@ export async function registerCard(cardData: Pick<CardData, 'cardUID' | 'userNam
     console.error('Error registering card:', error);
     // If something fails after user creation, we must delete the user to avoid orphans
     if(user) {
-        // This might fail if the user was already deleted, but it's a good cleanup attempt
         try { await supabase.auth.admin.deleteUser(user.id); } catch (e) {}
     }
     return { success: false, error: error.message };
   }
+}
+
+export async function getAccessLog() {
+    const { data, error } = await supabase
+        .from('access_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50);
+
+    if (error) {
+        console.error('Error fetching access log:', error);
+        return [];
+    }
+
+    return data;
 }

@@ -13,7 +13,17 @@ import { Badge } from '@/components/ui/badge';
 import type { AccessLogEntry } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 
-export function AccessLogTable({ logEntries }: { logEntries: AccessLogEntry[] }) {
+// This is now a type from the database row, not a custom type
+type LogEntry = {
+    id: number;
+    timestamp: string;
+    card_uid: string;
+    user_name: string;
+    status: string;
+    reason: string;
+}
+
+export function AccessLogTable({ logEntries }: { logEntries: LogEntry[] }) {
   const formatTimestamp = (isoString: string) => {
     return new Date(isoString).toLocaleString();
   };
@@ -22,7 +32,7 @@ export function AccessLogTable({ logEntries }: { logEntries: AccessLogEntry[] })
     <Card className="shadow-lg h-full">
       <CardHeader>
         <CardTitle>Live Access Log</CardTitle>
-        <CardDescription>Real-time feed of entry and exit events.</CardDescription>
+        <CardDescription>Real-time feed of entry and exit events from the database.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[380px]">
@@ -36,16 +46,16 @@ export function AccessLogTable({ logEntries }: { logEntries: AccessLogEntry[] })
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logEntries.length > 0 ? (
+              {logEntries && logEntries.length > 0 ? (
                 logEntries.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>
-                      <div className="font-medium">{log.userName}</div>
+                      <div className="font-medium">{log.user_name}</div>
                       <div className="text-sm text-muted-foreground md:hidden">
                         {formatTimestamp(log.timestamp)}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell font-code">{log.cardUID}</TableCell>
+                    <TableCell className="hidden sm:table-cell font-code">{log.card_uid}</TableCell>
                     <TableCell className="hidden md:table-cell">{formatTimestamp(log.timestamp)}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={log.status === 'Granted' ? 'default' : 'destructive'} className={log.status === 'Granted' ? 'bg-green-600' : ''}>
