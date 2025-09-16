@@ -28,7 +28,7 @@ def main():
         while True:
             # Lê uma linha da porta serial (o UID do cartão)
             if ser.in_waiting > 0:
-                line = ser.readline().decode('utf-8').strip()
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
 
                 # Se a linha não estiver vazia, é um UID
                 if line:
