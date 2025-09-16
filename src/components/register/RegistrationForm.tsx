@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,16 +12,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { registerCard } from '@/lib/actions';
+import { useWebSocket } from '../providers/WebSocketProvider';
 
 const formSchema = z.object({
   userName: z.string().min(2, 'O nome de usuário deve ter pelo menos 2 caracteres.'),
   userRole: z.enum(['Admin', 'User', 'Guest'], { required_error: 'Por favor, selecione um papel.' }),
-  cardUID: z.string().min(4, 'O UID do cartão é obrigatório.'),
+  cardUID: z.string().min(4, 'O UID do cartão é obrigatório. Aproxime um cartão do leitor.').max(50, 'UID do cartão muito longo.'),
 });
 
 export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { lastMessage } = useWebSocket();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -30,6 +32,16 @@ export function RegistrationForm() {
       cardUID: '',
     },
   });
+
+  // Efeito para preencher o campo de UID quando uma nova mensagem do WebSocket chegar
+  useEffect(() => {
+    if (lastMessage) {
+        const newUID = lastMessage.trim().toUpperCase();
+        console.log('Novo UID para registro:', newUID);
+        form.setValue('cardUID', newUID, { shouldValidate: true });
+    }
+  }, [lastMessage, form]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -61,7 +73,7 @@ export function RegistrationForm() {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle>Registro de Novo Cartão</CardTitle>
-        <CardDescription>Preencha os detalhes do usuário e o UID do cartão RFID para registrá-lo.</CardDescription>
+        <CardDescription>Preencha os detalhes do usuário e aproxime um cartão do leitor RFID para registrar.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -109,14 +121,15 @@ export function RegistrationForm() {
                   <FormLabel>UID do Cartão</FormLabel>
                   <FormControl>
                     <Input 
-                        placeholder="ex: 39C3BB99" 
+                        placeholder="Aguardando leitura do cartão..." 
                         {...field} 
                         onChange={e => field.onChange(e.target.value.toUpperCase())}
                         className="font-code"
+                        readOnly // Opcional: para evitar edição manual e forçar o uso do leitor
                     />
                   </FormControl>
                   <FormDescription>
-                    Insira o UID lido pelo Arduino.
+                    O UID será preenchido automaticamente ao aproximar o cartão do leitor.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

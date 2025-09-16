@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from '@/components/ui/toaster';
+import { WebSocketProvider } from '@/components/providers/WebSocketProvider';
 
 export const metadata: Metadata = {
   title: 'AccessKey',
@@ -24,7 +25,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AppShell>{children}</AppShell>
+        <WebSocketProvider>
+          <AppShell>{children}</AppShell>
+        </WebSocketProvider>
         <Toaster />
       </body>
     </html>

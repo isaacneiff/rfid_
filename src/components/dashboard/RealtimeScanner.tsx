@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import { ScanLine, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { checkAccess } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useWebSocket } from '../providers/WebSocketProvider';
 
 type ScanResult = {
   isAuthorized: boolean;
@@ -27,6 +28,26 @@ export function RealtimeScanner() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [cardUID, setCardUID] = useState('');
   const { toast } = useToast();
+  const { lastMessage } = useWebSocket();
+
+  // Efeito para atualizar o UID do cartão quando uma nova mensagem do WebSocket chegar
+  useEffect(() => {
+    if (lastMessage) {
+      const newUID = lastMessage.trim().toUpperCase();
+      console.log('Novo UID recebido do WebSocket:', newUID);
+      setCardUID(newUID);
+      // Limpa o resultado anterior para permitir uma nova verificação
+      setResult(null); 
+    }
+  }, [lastMessage]);
+
+  // Efeito para acionar a verificação automaticamente quando o UID mudar (inclusive via WebSocket)
+  useEffect(() => {
+    if (cardUID) {
+      handleScan();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardUID, lastMessage]); // A dependência do lastMessage garante que uma nova leitura dispare a verificação
 
   const handleScan = async (e?: React.FormEvent<HTMLFormElement>) => {
     if (e) e.preventDefault();
@@ -61,14 +82,19 @@ export function RealtimeScanner() {
     }
   };
 
+  const handleReset = () => {
+    setResult(null);
+    setCardUID('');
+  }
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle>Scanner RFID em Tempo Real</CardTitle>
-        <CardDescription>Insira um UID de cartão para simular uma leitura de hardware.</CardDescription>
+        <CardDescription>Aproxime um cartão do leitor ou insira um UID para simular.</CardDescription>
       </CardHeader>
       <form onSubmit={handleScan}>
-        <CardContent className="flex flex-col items-center justify-center space-y-6 p-10">
+        <CardContent className="flex flex-col items-center justify-center space-y-6 p-10 min-h-[220px]">
           {result === null && !isLoading && (
             <div className="w-full space-y-2">
                 <Label htmlFor='card-uid-input'>UID do Cartão</Label>
@@ -76,7 +102,7 @@ export function RealtimeScanner() {
                     id="card-uid-input"
                     value={cardUID}
                     onChange={e => setCardUID(e.target.value.toUpperCase())}
-                    placeholder="ex: 39C3BB99"
+                    placeholder="Aguardando leitura..."
                     className="font-code text-center"
                     disabled={isLoading}
                 />
@@ -102,16 +128,16 @@ export function RealtimeScanner() {
               )}
               <p className="text-xl font-bold">{result.isAuthorized ? 'Acesso Concedido' : 'Acesso Negado'}</p>
               <p className="text-sm text-muted-foreground">{result.reason}</p>
-              <Button variant="outline" onClick={() => { setResult(null); setCardUID(''); }} className="mt-4">
+              <Button variant="outline" onClick={handleReset} className="mt-4">
                 Escanear outro cartão
               </Button>
             </div>
           )}
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading || result !== null} className="w-full bg-primary hover:bg-primary/90">
+          <Button type="submit" disabled={isLoading || result !== null || !cardUID} className="w-full bg-primary hover:bg-primary/90">
             <ScanLine className="mr-2 h-4 w-4" />
-            {isLoading ? 'Verificando...' : 'Verificar Acesso do Cartão'}
+            {isLoading ? 'Verificando...' : 'Verificar Acesso Manual'}
           </Button>
         </CardFooter>
       </form>
